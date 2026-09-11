@@ -1,7 +1,8 @@
 from django.db import models
+import uuid
 
 def document_upload_path(instance, filename):
-    return f"documents/{instance.id or 'new'}/{filename}"
+    return f"documents/{instance.upload_key}/{filename}"
 
 class Document(models.Model):
     STATUS_CHOICES = [
@@ -9,6 +10,8 @@ class Document(models.Model):
         ('verified', 'Verified'),
         ('favorite', 'Favorite'),
     ]
+
+    upload_key = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
 
     doc_type = models.CharField(max_length=50, default='receipt')
     title = models.CharField(max_length=255, blank=True)
