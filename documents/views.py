@@ -6,4 +6,4 @@ from .serializers import DocumentSerializer
 class DocumentViewSet(ModelViewSet):
     queryset = Document.objects.all().order_by('-created_at')
     serializer_class = DocumentSerializer
-    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    parser_classes = [JSONParser, FormParser, MultiPartParser]
