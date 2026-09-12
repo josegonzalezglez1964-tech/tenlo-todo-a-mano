@@ -20,8 +20,7 @@ class Migration(migrations.Migration):
             model_name='document',
             name='notes',
         ),
-        migrations.RemoveFie
-ld(
+        migrations.RemoveField(
             model_name='document',
             name='ticket_number',
         ),
