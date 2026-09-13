@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('documents', '0004_populate_upload_keys'),
+        ('documents', '0004_1_fix_duplicate_upload_keys'),
     ]
 
     operations = [
