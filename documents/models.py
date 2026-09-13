@@ -1,11 +1,24 @@
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
+
+ALLOWED_DOCUMENT_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "pdf"]
+MAX_DOCUMENT_FILE_SIZE_MB = 10
 
 
 def document_upload_path(instance, filename):
     return f"documents/{instance.upload_key}/{filename}"
+
+
+def validate_document_file_size(file):
+    max_bytes = MAX_DOCUMENT_FILE_SIZE_MB * 1024 * 1024
+    if file.size > max_bytes:
+        raise ValidationError(
+            f"El archivo supera el límite de {MAX_DOCUMENT_FILE_SIZE_MB} MB."
+        )
 
 
 class Document(models.Model):
@@ -25,8 +38,6 @@ class Document(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="documents",
-        null=False,
-        blank=False,
     )
 
     doc_type = models.CharField(
@@ -93,6 +104,10 @@ class Document(models.Model):
         upload_to=document_upload_path,
         blank=True,
         null=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=ALLOWED_DOCUMENT_EXTENSIONS),
+            validate_document_file_size,
+        ],
     )
 
     created_at = models.DateTimeField(
