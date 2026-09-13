@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -18,6 +19,14 @@ class Document(models.Model):
         default=uuid.uuid4,
         unique=True,
         editable=False,
+    )
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="documents",
+        null=False,
+        blank=False,
     )
 
     doc_type = models.CharField(
