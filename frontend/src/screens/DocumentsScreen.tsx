@@ -1,0 +1,192 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { api, logout } from '../api/client';
+
+type Document = {
+  id: number;
+  title: string;
+  merchant_name: string;
+  date: string | null;
+  total: string | null;
+  currency: string;
+  status: string;
+};
+
+type Props = {
+  onLogout: () => void;
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pendiente',
+  verified: 'Verificado',
+  favorite: 'Favorito',
+};
+
+export default function DocumentsScreen({ onLogout }: Props) {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const response = await api.get('/api/documents/');
+      const results = response.data.results ?? response.data;
+      setDocuments(results);
+    } catch (error) {
+      console.log('Error al cargar documentos', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await fetchDocuments();
+      setLoading(false);
+    })();
+  }, [fetchDocuments]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchDocuments();
+    setRefreshing(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    onLogout();
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#2c3e50" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Mis facturas</Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logoutText}>Salir</Text>
+        </TouchableOpacity>
+      </View>
+
+      <FlatList
+        data={documents}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={documents.length === 0 && styles.emptyContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            Todavía no tienes facturas registradas.
+          </Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardTitle}>
+                {item.title || item.merchant_name || 'Sin título'}
+              </Text>
+              <Text style={styles.cardTotal}>
+                {item.total ? `${item.total} ${item.currency || ''}` : '—'}
+              </Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardSubtitle}>{item.date || 'Sin fecha'}</Text>
+              <Text style={styles.cardStatus}>
+                {STATUS_LABELS[item.status] || item.status}
+              </Text>
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 16,
+    backgroundColor: '#2c3e50',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  logoutText: {
+    color: '#ecf0f1',
+    fontSize: 14,
+  },
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#95a5a6',
+    fontSize: 15,
+  },
+  card: {
+    backgroundColor: '#fff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  cardTotal: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#27ae60',
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: '#7f8c8d',
+  },
+  cardStatus: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+  },
+});

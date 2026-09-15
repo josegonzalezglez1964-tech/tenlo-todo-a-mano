@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+
+# Django DB
+*.sqlite3
+*.sqlite3-journal
+
+# Backups (en disco pero fuera de git)
+*.backup
+*.backup-*
+
+# Media & static
+media/
+staticfiles/
+
+# OS junk
+.DS_Store
+Thumbs.db
+db.sqlite3
+*.bak
