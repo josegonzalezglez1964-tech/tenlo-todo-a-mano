@@ -22,6 +22,8 @@ type Document = {
 
 type Props = {
   onLogout: () => void;
+  onAddPress: () => void;
+  refreshKey: number;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -30,7 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
   favorite: 'Favorito',
 };
 
-export default function DocumentsScreen({ onLogout }: Props) {
+export default function DocumentsScreen({ onLogout, onAddPress, refreshKey }: Props) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,7 +53,7 @@ export default function DocumentsScreen({ onLogout }: Props) {
       await fetchDocuments();
       setLoading(false);
     })();
-  }, [fetchDocuments]);
+  }, [fetchDocuments, refreshKey]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -112,6 +114,10 @@ export default function DocumentsScreen({ onLogout }: Props) {
           </View>
         )}
       />
+
+      <TouchableOpacity style={styles.fab} onPress={onAddPress}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -188,5 +194,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#7f8c8d',
     fontStyle: 'italic',
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#27ae60',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '600',
+    lineHeight: 30,
   },
 });

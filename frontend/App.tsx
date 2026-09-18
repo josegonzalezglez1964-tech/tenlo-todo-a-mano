@@ -3,11 +3,16 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
+import AddDocumentScreen from './src/screens/AddDocumentScreen';
 import { isLoggedIn } from './src/api/client';
+
+type Screen = 'documents' | 'add';
 
 export default function App() {
   const [checking, setChecking] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [screen, setScreen] = useState<Screen>('documents');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -25,13 +30,32 @@ export default function App() {
     );
   }
 
+  if (!loggedIn) {
+    return (
+      <>
+        <StatusBar style="auto" />
+        <LoginScreen onLoginSuccess={() => setLoggedIn(true)} />
+      </>
+    );
+  }
+
   return (
     <>
       <StatusBar style="auto" />
-      {loggedIn ? (
-        <DocumentsScreen onLogout={() => setLoggedIn(false)} />
+      {screen === 'documents' ? (
+        <DocumentsScreen
+          onLogout={() => setLoggedIn(false)}
+          onAddPress={() => setScreen('add')}
+          refreshKey={refreshKey}
+        />
       ) : (
-        <LoginScreen onLoginSuccess={() => setLoggedIn(true)} />
+        <AddDocumentScreen
+          onSaved={() => {
+            setRefreshKey((k) => k + 1);
+            setScreen('documents');
+          }}
+          onCancel={() => setScreen('documents')}
+        />
       )}
     </>
   );

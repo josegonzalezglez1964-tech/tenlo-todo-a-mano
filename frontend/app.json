@@ -20,6 +20,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite el acceso a tus fotos para adjuntar imágenes de tus facturas.",
+          "cameraPermission": "Permite el acceso a la cámara para fotografiar tus facturas."
+        }
+      ]
+    ]
   }
 }
