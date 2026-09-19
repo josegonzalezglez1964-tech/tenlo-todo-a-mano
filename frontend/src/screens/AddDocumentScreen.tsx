@@ -45,6 +45,29 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
     }
   };
 
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permiso necesario', 'Necesitamos acceso a la cámara para hacer la foto de la factura.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const choosePhoto = () => {
+    Alert.alert('Foto de la factura', 'Elige cómo quieres añadirla', [
+      { text: 'Hacer foto', onPress: takePhoto },
+      { text: 'Elegir de la galería', onPress: pickImage },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
   const handleSave = async () => {
     if (!title && !merchantName) {
       Alert.alert('Falta información', 'Añade al menos un título o un comercio.');
@@ -87,11 +110,11 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.header}>Nueva factura</Text>
 
-      <TouchableOpacity style={styles.photoBox} onPress={pickImage}>
+      <TouchableOpacity style={styles.photoBox} onPress={choosePhoto}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.photoPreview} />
         ) : (
-          <Text style={styles.photoBoxText}>Toca para elegir una foto</Text>
+          <Text style={styles.photoBoxText}>Toca para hacer o elegir una foto</Text>
         )}
       </TouchableOpacity>
 
