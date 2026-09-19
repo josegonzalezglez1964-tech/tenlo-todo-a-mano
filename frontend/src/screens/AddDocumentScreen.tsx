@@ -65,7 +65,19 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
       });
       onSaved();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar la factura. Revisa los datos e inténtalo de nuevo.');
+      const err: any = error;
+      console.log('Error al guardar', err?.response?.status, err?.response?.data ?? err?.message);
+      let msg = 'No se pudo conectar con el servidor. Comprueba que el backend está en marcha.';
+      if (err?.response) {
+        const data = err.response.data;
+        msg =
+          data && typeof data === 'object'
+            ? Object.entries(data)
+                .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`)
+                .join('\n')
+            : `Error ${err.response.status}`;
+      }
+      Alert.alert('No se pudo guardar', msg);
     } finally {
       setSaving(false);
     }
