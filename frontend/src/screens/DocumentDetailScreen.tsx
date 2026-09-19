@@ -54,6 +54,24 @@ export default function DocumentDetailScreen({
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scan, setScan] = useState<any>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const handleScan = async () => {
+    setScanning(true);
+    setScanError(null);
+    setScan(null);
+    try {
+      const response = await api.post(`/api/ocr/documents/${id}/scan/`);
+      setScan(response.data);
+    } catch (error: any) {
+      const data = error?.response?.data;
+      const detail = data?.detail || (Array.isArray(data) ? data.join(', ') : null);
+      setScanError(detail || 'No se pudo escanear la factura.');
+    }
+    setScanning(false);
+  };
 
   useEffect(() => {
     (async () => {
@@ -111,6 +129,27 @@ export default function DocumentDetailScreen({
           <Row label="Tipo" value={doc.doc_type} />
           <Row label="Estado" value={STATUS_LABELS[doc.status] || doc.status} />
           <Row label="Creada" value={doc.created_at?.slice(0, 10)} />
+          {doc.file ? (
+            <TouchableOpacity
+              style={styles.scanButton}
+              onPress={handleScan}
+              disabled={scanning}
+            >
+              <Text style={styles.scanButtonText}>
+                {scanning ? 'Escaneando…' : 'Escanear texto (OCR)'}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {scanError ? <Text style={styles.scanError}>{scanError}</Text> : null}
+          {scan ? (
+            <View style={styles.scanBox}>
+              <Text style={styles.scanTitle}>Sugerencias</Text>
+              <Text style={styles.scanLine}>Total: {scan.suggestions?.total ?? '—'}</Text>
+              <Text style={styles.scanLine}>Fecha: {scan.suggestions?.date ?? '—'}</Text>
+              <Text style={[styles.scanTitle, { marginTop: 12 }]}>Texto detectado</Text>
+              <Text style={styles.scanLine}>{scan.raw_text || '(sin texto)'}</Text>
+            </View>
+          ) : null}
         </ScrollView>
       )}
     </View>
@@ -144,4 +183,16 @@ const styles = StyleSheet.create({
   },
   label: { color: '#7f8c8d', fontSize: 15 },
   value: { color: '#2c3e50', fontSize: 15, flexShrink: 1, textAlign: 'right' },
+  scanButton: {
+    marginTop: 20,
+    backgroundColor: '#2c3e50',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  scanButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  scanError: { color: '#c0392b', marginTop: 12, fontSize: 15 },
+  scanBox: { marginTop: 16, padding: 14, backgroundColor: '#fff', borderRadius: 12 },
+  scanTitle: { fontSize: 16, fontWeight: '700', color: '#2c3e50', marginBottom: 6 },
+  scanLine: { color: '#2c3e50', fontSize: 15 },
 });
