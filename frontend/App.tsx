@@ -4,15 +4,17 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import LoginScreen from './src/screens/LoginScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import AddDocumentScreen from './src/screens/AddDocumentScreen';
+import DocumentDetailScreen from './src/screens/DocumentDetailScreen';
 import { isLoggedIn } from './src/api/client';
 
-type Screen = 'documents' | 'add';
+type Screen = 'documents' | 'add' | 'detail';
 
 export default function App() {
   const [checking, setChecking] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [screen, setScreen] = useState<Screen>('documents');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -46,8 +48,14 @@ export default function App() {
         <DocumentsScreen
           onLogout={() => setLoggedIn(false)}
           onAddPress={() => setScreen('add')}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setScreen('detail');
+          }}
           refreshKey={refreshKey}
         />
+      ) : screen === 'detail' && selectedId !== null ? (
+        <DocumentDetailScreen id={selectedId} onBack={() => setScreen('documents')} />
       ) : (
         <AddDocumentScreen
           onSaved={() => {

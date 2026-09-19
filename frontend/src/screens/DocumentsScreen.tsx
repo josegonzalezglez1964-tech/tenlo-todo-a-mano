@@ -23,6 +23,7 @@ type Document = {
 type Props = {
   onLogout: () => void;
   onAddPress: () => void;
+  onSelect: (id: number) => void;
   refreshKey: number;
 };
 
@@ -32,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
   favorite: 'Favorito',
 };
 
-export default function DocumentsScreen({ onLogout, onAddPress, refreshKey }: Props) {
+export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refreshKey }: Props) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -96,7 +97,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, refreshKey }: Pr
           </Text>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity style={styles.card} onPress={() => onSelect(item.id)}>
             <View style={styles.cardRow}>
               <Text style={styles.cardTitle}>
                 {item.title || item.merchant_name || 'Sin título'}
@@ -111,7 +112,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, refreshKey }: Pr
                 {STATUS_LABELS[item.status] || item.status}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
 
