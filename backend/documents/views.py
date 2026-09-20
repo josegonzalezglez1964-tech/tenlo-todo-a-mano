@@ -2,12 +2,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
+from django_filters.rest_framework import DjangoFilterBackend
+
+from .filters import DocumentFilter
 from .models import Document
 from .serializers import DocumentSerializer
 
 
 class DocumentViewSet(ModelViewSet):
     serializer_class = DocumentSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = DocumentFilter
     parser_classes = [JSONParser, FormParser, MultiPartParser]
     permission_classes = [IsAuthenticated]
 

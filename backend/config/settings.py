@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_yasg',
     'rest_framework',
+    'django_filters',
     'accounts',
     'documents',
     'ocr',
