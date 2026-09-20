@@ -37,3 +37,14 @@ class DocumentViewSet(ModelViewSet):
             .distinct()
         )
         return Response(list(names))
+
+    @action(detail=False, methods=["post"])
+    def rename_category(self, request):
+        old = (request.data.get("old") or "").strip()
+        new = (request.data.get("new") or "").strip()
+        if not old or not new:
+            return Response(
+                {"detail": "Hacen falta 'old' y 'new'."}, status=400
+            )
+        updated = self.get_queryset().filter(category__iexact=old).update(category=new)
+        return Response({"updated": updated})
