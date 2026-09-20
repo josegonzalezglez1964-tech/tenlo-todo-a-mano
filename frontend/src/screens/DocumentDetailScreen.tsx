@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { api } from '../api/client';
 
@@ -47,10 +48,12 @@ export default function DocumentDetailScreen({
   id,
   onBack,
   onEdit,
+  onDeleted,
 }: {
   id: number;
   onBack: () => void;
   onEdit: () => void;
+  onDeleted: () => void;
 }) {
   const [doc, setDoc] = useState<Doc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +62,8 @@ export default function DocumentDetailScreen({
   const [scanning, setScanning] = useState(false);
   const [scan, setScan] = useState<any>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applyMsg, setApplyMsg] = useState<string | null>(null);
 
   const handleScan = async () => {
     setScanning(true);
@@ -73,6 +78,46 @@ export default function DocumentDetailScreen({
       setScanError(detail || 'No se pudo escanear la factura.');
     }
     setScanning(false);
+  };
+
+  const handleApply = async () => {
+    const payload: Record<string, string> = {};
+    if (scan?.suggestions?.total) payload.total = scan.suggestions.total;
+    if (scan?.suggestions?.date) payload.date = scan.suggestions.date;
+    if (Object.keys(payload).length === 0) return;
+    setApplying(true);
+    setApplyMsg(null);
+    try {
+      const response = await api.patch(`/api/documents/${id}/`, payload);
+      setDoc(response.data);
+      setApplyMsg('Sugerencias aplicadas ✓');
+    } catch (error: any) {
+      const data = error?.response?.data;
+      setApplyMsg(data ? JSON.stringify(data) : 'No se pudieron aplicar las sugerencias.');
+    }
+    setApplying(false);
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Eliminar factura',
+      'Se borrará esta factura y su foto. Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/api/documents/${id}/`);
+              onDeleted();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar la factura.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   useEffect(() => {
@@ -152,8 +197,30 @@ export default function DocumentDetailScreen({
               <Text style={styles.scanLine}>Fecha: {scan.suggestions?.date ?? '—'}</Text>
               <Text style={[styles.scanTitle, { marginTop: 12 }]}>Texto detectado</Text>
               <Text style={styles.scanLine}>{scan.raw_text || '(sin texto)'}</Text>
+              {scan.suggestions?.total || scan.suggestions?.date ? (
+                <TouchableOpacity
+                  style={styles.applyButton}
+                  onPress={handleApply}
+                  disabled={applying}
+                >
+                  <Text style={styles.applyText}>
+                    {applying
+                      ? 'Aplicando…'
+                      : `Usar sugerencias (${[
+                          scan.suggestions?.total ? `total ${scan.suggestions.total}` : null,
+                          scan.suggestions?.date ? `fecha ${scan.suggestions.date}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(', ')})`}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {applyMsg ? <Text style={styles.applyMsg}>{applyMsg}</Text> : null}
             </View>
           ) : null}
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <Text style={styles.deleteText}>Eliminar factura</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </View>
@@ -200,4 +267,23 @@ const styles = StyleSheet.create({
   scanBox: { marginTop: 16, padding: 14, backgroundColor: '#fff', borderRadius: 12 },
   scanTitle: { fontSize: 16, fontWeight: '700', color: '#2c3e50', marginBottom: 6 },
   scanLine: { color: '#2c3e50', fontSize: 15 },
+  applyButton: {
+    marginTop: 14,
+    backgroundColor: '#27ae60',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  applyText: { color: '#fff', fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  applyMsg: { marginTop: 8, color: '#27ae60', fontSize: 14 },
+  deleteButton: {
+    marginTop: 28,
+    borderWidth: 1,
+    borderColor: '#c0392b',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  deleteText: { color: '#c0392b', fontSize: 16, fontWeight: '700' },
 });

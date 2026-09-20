@@ -60,6 +60,10 @@ export default function App() {
           id={selectedId}
           onBack={() => setScreen('documents')}
           onEdit={() => setScreen('edit')}
+          onDeleted={() => {
+            setRefreshKey((k) => k + 1);
+            setScreen('documents');
+          }}
         />
       ) : screen === 'edit' && selectedId !== null ? (
         <EditDocumentScreen
