@@ -5,9 +5,10 @@ import LoginScreen from './src/screens/LoginScreen';
 import DocumentsScreen from './src/screens/DocumentsScreen';
 import AddDocumentScreen from './src/screens/AddDocumentScreen';
 import DocumentDetailScreen from './src/screens/DocumentDetailScreen';
+import EditDocumentScreen from './src/screens/EditDocumentScreen';
 import { isLoggedIn } from './src/api/client';
 
-type Screen = 'documents' | 'add' | 'detail';
+type Screen = 'documents' | 'add' | 'detail' | 'edit';
 
 export default function App() {
   const [checking, setChecking] = useState(true);
@@ -55,7 +56,20 @@ export default function App() {
           refreshKey={refreshKey}
         />
       ) : screen === 'detail' && selectedId !== null ? (
-        <DocumentDetailScreen id={selectedId} onBack={() => setScreen('documents')} />
+        <DocumentDetailScreen
+          id={selectedId}
+          onBack={() => setScreen('documents')}
+          onEdit={() => setScreen('edit')}
+        />
+      ) : screen === 'edit' && selectedId !== null ? (
+        <EditDocumentScreen
+          id={selectedId}
+          onSaved={() => {
+            setRefreshKey((k) => k + 1);
+            setScreen('detail');
+          }}
+          onCancel={() => setScreen('detail')}
+        />
       ) : (
         <AddDocumentScreen
           onSaved={() => {

@@ -165,3 +165,32 @@ export async function createDocument(input: NewDocumentInput) {
   });
   return response.data;
 }
+export type EditDocumentInput = {
+  title: string;
+  merchant_name: string;
+  date: string;
+  total: string;
+  taxes: string;
+  currency: string;
+  payment_method: string;
+  category: string;
+  status: string;
+};
+
+export async function updateDocument(id: number, input: EditDocumentInput) {
+  const date = normalizeDate(input.date);
+  const total = normalizeNumber(input.total);
+  const taxes = normalizeNumber(input.taxes);
+  const response = await api.patch(`/api/documents/${id}/`, {
+    title: input.title.trim(),
+    merchant_name: input.merchant_name.trim(),
+    date: date || null,
+    total: total || null,
+    taxes: taxes || null,
+    currency: input.currency.trim(),
+    payment_method: input.payment_method.trim(),
+    category: input.category.trim(),
+    status: input.status,
+  });
+  return response.data;
+}

@@ -7,6 +7,8 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { api, logout } from '../api/client';
 
@@ -33,32 +35,63 @@ const STATUS_LABELS: Record<string, string> = {
   favorite: 'Favorito',
 };
 
+const ORDER_OPTIONS = [
+  { value: '', label: 'Recientes' },
+  { value: '-total', label: 'Más caras' },
+  { value: 'total', label: 'Más baratas' },
+  { value: '-date', label: 'Por fecha' },
+];
+
 export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refreshKey }: Props) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [ordering, setOrdering] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const response = await api.get('/api/documents/');
+      const params: Record<string, string> = {};
+      if (search.trim()) params.search = search.trim();
+      if (category) params.category = category;
+      if (ordering) params.ordering = ordering;
+      const response = await api.get('/api/documents/', { params });
       const results = response.data.results ?? response.data;
       setDocuments(results);
     } catch (error) {
       console.log('Error al cargar documentos', error);
     }
+  }, [search, category, ordering]);
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      await fetchDocuments();
+      setLoading(false);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [fetchDocuments, refreshKey]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await api.get('/api/documents/categories/');
+      setCategories(response.data);
+      setCategory((current) =>
+        current && !response.data.includes(current) ? '' : current
+      );
+    } catch (error) {
+      console.log('Error al cargar categorías', error);
+    }
   }, []);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      await fetchDocuments();
-      setLoading(false);
-    })();
-  }, [fetchDocuments, refreshKey]);
+    fetchCategories();
+  }, [fetchCategories, refreshKey]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchDocuments();
+    await Promise.all([fetchDocuments(), fetchCategories()]);
     setRefreshing(false);
   };
 
@@ -82,6 +115,42 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
         <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Salir</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.filters}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por título, comercio o categoría"
+          value={search}
+          onChangeText={setSearch}
+          autoCorrect={false}
+        />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+          {['', ...categories].map((name) => (
+            <TouchableOpacity
+              key={name || 'todas'}
+              style={[styles.chip, category === name && styles.chipActive]}
+              onPress={() => setCategory(name)}
+            >
+              <Text style={[styles.chipText, category === name && styles.chipTextActive]}>
+                {name || 'Todas'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+          {ORDER_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.value || 'recientes'}
+              style={[styles.chip, ordering === opt.value && styles.chipActive]}
+              onPress={() => setOrdering(opt.value)}
+            >
+              <Text style={[styles.chipText, ordering === opt.value && styles.chipTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FlatList
@@ -195,6 +264,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#7f8c8d',
     fontStyle: 'italic',
+  },
+  filters: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  searchInput: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#dfe6e9',
+  },
+  chipRow: {
+    flexGrow: 0,
+    marginTop: 10,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#dfe6e9',
+    marginRight: 8,
+  },
+  chipActive: {
+    backgroundColor: '#2c3e50',
+    borderColor: '#2c3e50',
+  },
+  chipText: {
+    fontSize: 13,
+    color: '#2c3e50',
+  },
+  chipTextActive: {
+    color: '#fff',
   },
   fab: {
     position: 'absolute',

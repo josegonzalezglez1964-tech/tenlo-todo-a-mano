@@ -46,9 +46,11 @@ function Row({ label, value }: { label: string; value?: string | null }) {
 export default function DocumentDetailScreen({
   id,
   onBack,
+  onEdit,
 }: {
   id: number;
   onBack: () => void;
+  onEdit: () => void;
 }) {
   const [doc, setDoc] = useState<Doc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +95,9 @@ export default function DocumentDetailScreen({
           <Text style={styles.back}>‹ Volver</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Detalle</Text>
-        <View style={{ width: 60 }} />
+        <TouchableOpacity onPress={onEdit}>
+          <Text style={styles.edit}>Editar</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -170,6 +174,7 @@ const styles = StyleSheet.create({
   },
   back: { fontSize: 16, color: '#2c3e50', width: 60 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
+  edit: { fontSize: 16, color: '#2c3e50', width: 60, textAlign: 'right' },
   content: { padding: 16 },
   image: { width: '100%', height: 220, borderRadius: 12, marginBottom: 16 },
   title: { fontSize: 22, fontWeight: '700', color: '#2c3e50' },
