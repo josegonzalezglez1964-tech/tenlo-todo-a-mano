@@ -22,8 +22,21 @@ EXPORT_COLUMNS = [
 ]
 
 
-def _get_user_documents(user):
-    return Document.objects.filter(owner=user).order_by('-date', '-created_at')
+def _get_user_documents(request):
+    from django.db.models import Q
+
+    from documents.filters import DocumentFilter
+
+    qs = Document.objects.filter(owner=request.user).order_by('-date', '-created_at')
+    qs = DocumentFilter(request.query_params, queryset=qs).qs
+    search = request.query_params.get('search', '').strip()
+    if search:
+        qs = qs.filter(
+            Q(title__icontains=search)
+            | Q(merchant_name__icontains=search)
+            | Q(category__icontains=search)
+        )
+    return qs
 
 
 class ExportCSVView(APIView):
@@ -36,7 +49,7 @@ class ExportCSVView(APIView):
         writer = csv.writer(response)
         writer.writerow([label for _, label in EXPORT_COLUMNS])
 
-        for doc in _get_user_documents(request.user):
+        for doc in _get_user_documents(request):
             writer.writerow([getattr(doc, field) or '' for field, _ in EXPORT_COLUMNS])
 
         return response
@@ -52,7 +65,7 @@ class ExportExcelView(APIView):
 
         sheet.append([label for _, label in EXPORT_COLUMNS])
 
-        for doc in _get_user_documents(request.user):
+        for doc in _get_user_documents(request):
             sheet.append([str(getattr(doc, field) or '') for field, _ in EXPORT_COLUMNS])
 
         response = HttpResponse(
@@ -73,7 +86,7 @@ class ExportPDFView(APIView):
         doc = SimpleDocTemplate(response, pagesize=A4)
         data = [[label for _, label in EXPORT_COLUMNS]]
 
-        for document in _get_user_documents(request.user):
+        for document in _get_user_documents(request):
             data.append([str(getattr(document, field) or '') for field, _ in EXPORT_COLUMNS])
 
         table = Table(data, repeatRows=1)

@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -193,4 +195,48 @@ export async function updateDocument(id: number, input: EditDocumentInput) {
     status: input.status,
   });
   return response.data;
+}
+
+const EXPORT_FORMATS: Record<string, { ext: string; mime: string }> = {
+  csv: { ext: 'csv', mime: 'text/csv' },
+  excel: {
+    ext: 'xlsx',
+    mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  },
+  pdf: { ext: 'pdf', mime: 'application/pdf' },
+};
+
+export async function exportDocuments(
+  format: 'csv' | 'excel' | 'pdf',
+  params: Record<string, string>
+) {
+  const { ext, mime } = EXPORT_FORMATS[format];
+  if (Platform.OS === 'web') {
+    const response = await api.get(`/api/exports/${format}/`, {
+      params,
+      responseType: 'arraybuffer',
+    });
+    const blob = new Blob([response.data], { type: mime });
+    const url = (URL as any).createObjectURL(blob);
+    const link = (globalThis as any).document.createElement('a');
+    link.href = url;
+    link.download = `facturas.${ext}`;
+    link.click();
+    (URL as any).revokeObjectURL(url);
+    return;
+  }
+
+  // Una petición ligera renueva el token si había caducado.
+  await api.get('/api/documents/summary/');
+  const token = await AsyncStorage.getItem('access_token');
+  const query = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  const url = `${API_BASE_URL}/api/exports/${format}/${query ? `?${query}` : ''}`;
+  const file = await File.downloadFileAsync(
+    url,
+    new File(Paths.cache, `facturas.${ext}`),
+    { headers: { Authorization: `Bearer ${token}` }, idempotent: true }
+  );
+  await Sharing.shareAsync(file.uri, { mimeType: mime, dialogTitle: 'Exportar facturas' });
 }

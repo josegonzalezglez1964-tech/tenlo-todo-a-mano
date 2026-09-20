@@ -9,8 +9,9 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
+  Alert,
 } from 'react-native';
-import { api, logout } from '../api/client';
+import { api, logout, exportDocuments } from '../api/client';
 
 type Document = {
   id: number;
@@ -98,6 +99,18 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
     setRefreshing(false);
   };
 
+  const handleExport = async (format: 'csv' | 'excel' | 'pdf') => {
+    const params: Record<string, string> = {};
+    if (search.trim()) params.search = search.trim();
+    if (category) params.category = category;
+    try {
+      await exportDocuments(format, params);
+    } catch (error) {
+      console.log('Error al exportar', error);
+      Alert.alert('Error', 'No se pudo exportar. Inténtalo de nuevo.');
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     onLogout();
@@ -162,6 +175,15 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
           {summary.total.toFixed(2).replace('.', ',')} €
         </Text>
       ) : null}
+
+      <View style={styles.exportRow}>
+        <Text style={styles.exportLabel}>Exportar:</Text>
+        {(['csv', 'excel', 'pdf'] as const).map((f) => (
+          <TouchableOpacity key={f} style={styles.exportButton} onPress={() => handleExport(f)}>
+            <Text style={styles.exportText}>{f === 'excel' ? 'Excel' : f.toUpperCase()}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <FlatList
         data={documents}
@@ -319,6 +341,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2c3e50',
   },
+  exportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  exportLabel: { fontSize: 13, color: '#7f8c8d', marginRight: 8 },
+  exportButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#2c3e50',
+    marginRight: 8,
+  },
+  exportText: { fontSize: 12, fontWeight: '700', color: '#2c3e50' },
   fab: {
     position: 'absolute',
     right: 20,
