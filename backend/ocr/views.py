@@ -13,7 +13,7 @@ from documents.models import Document
 IMAGE_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
 
 TOTAL_PATTERN = re.compile(
-    r"(?:total|importe)[^\d]{0,15}(\d{1,4}[.,]\d{2})",
+    r"(?<![a-z])total[^0-9]{0,30}([0-9]{1,6}[.,][0-9]{2})",
     re.IGNORECASE,
 )
 DATE_PATTERNS = [
@@ -64,8 +64,27 @@ class OCRScanDocumentView(APIView):
                 "El OCR solo funciona con imágenes (jpg, jpeg, png, webp) por ahora, no con PDF."
             )
 
+        from PIL import ImageFilter, ImageOps
+
         image = Image.open(document.file)
-        raw_text = pytesseract.image_to_string(image, lang="spa+eng")
+        image = ImageOps.exif_transpose(image)
+        image = image.convert("L")
+        if max(image.size) > 2500:
+            image.thumbnail((2500, 2500))
+        image = ImageOps.autocontrast(image, cutoff=2)
+        image = image.filter(ImageFilter.SHARPEN)
+        raw_text = pytesseract.image_to_string(
+            image, lang="spa_best+eng", config="--oem 1 --psm 4"
+        )
+        clean_lines = []
+        for line in raw_text.splitlines():
+            line = line.strip()
+            if len(line) < 3:
+                continue
+            if sum(c.isalnum() for c in line) / len(line) < 0.4:
+                continue
+            clean_lines.append(line)
+        raw_text = "\n".join(clean_lines)
 
         return Response({
             "document_id": document.id,
