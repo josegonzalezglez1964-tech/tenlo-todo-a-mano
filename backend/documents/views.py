@@ -48,3 +48,11 @@ class DocumentViewSet(ModelViewSet):
             )
         updated = self.get_queryset().filter(category__iexact=old).update(category=new)
         return Response({"updated": updated})
+
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        from django.db.models import Sum
+
+        qs = self.filter_queryset(self.get_queryset())
+        total = qs.aggregate(total=Sum("total"))["total"]
+        return Response({"count": qs.count(), "total": float(total or 0)})

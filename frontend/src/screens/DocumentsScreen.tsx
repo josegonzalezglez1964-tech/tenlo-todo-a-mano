@@ -50,6 +50,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
   const [category, setCategory] = useState('');
   const [ordering, setOrdering] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [summary, setSummary] = useState<{ count: number; total: number } | null>(null);
 
   const fetchDocuments = useCallback(async () => {
     try {
@@ -60,6 +61,8 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
       const response = await api.get('/api/documents/', { params });
       const results = response.data.results ?? response.data;
       setDocuments(results);
+      const sum = await api.get('/api/documents/summary/', { params });
+      setSummary(sum.data);
     } catch (error) {
       console.log('Error al cargar documentos', error);
     }
@@ -152,6 +155,13 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
           ))}
         </ScrollView>
       </View>
+
+      {summary ? (
+        <Text style={styles.summary}>
+          {summary.count} {summary.count === 1 ? 'factura' : 'facturas'} ·{' '}
+          {summary.total.toFixed(2).replace('.', ',')} €
+        </Text>
+      ) : null}
 
       <FlatList
         data={documents}
@@ -301,6 +311,13 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#fff',
+  },
+  summary: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2c3e50',
   },
   fab: {
     position: 'absolute',
