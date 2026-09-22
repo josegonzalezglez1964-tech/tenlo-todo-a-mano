@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { api, updateDocument } from '../api/client';
+import CategoryPicker from '../components/CategoryPicker';
 
 const FIELDS = [
   { key: 'title', label: 'Título' },
@@ -107,18 +108,26 @@ export default function EditDocumentScreen({
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {FIELDS.map((f) => (
-            <View key={f.key} style={styles.field}>
-              <Text style={styles.label}>{f.label}</Text>
-              <TextInput
-                style={styles.input}
-                value={form[f.key]}
-                onChangeText={(v) => setField(f.key, v)}
-                keyboardType={f.numeric ? 'decimal-pad' : 'default'}
-                autoCorrect={false}
+          {FIELDS.map((f) =>
+            f.key === 'category' ? (
+              <CategoryPicker
+                key={f.key}
+                value={form.category}
+                onChange={(v: string) => setField('category', v)}
               />
-            </View>
-          ))}
+            ) : (
+              <View key={f.key} style={styles.field}>
+                <Text style={styles.label}>{f.label}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form[f.key]}
+                  onChangeText={(v) => setField(f.key, v)}
+                  keyboardType={f.numeric ? 'decimal-pad' : 'default'}
+                  autoCorrect={false}
+                />
+              </View>
+            )
+          )}
 
           <Text style={styles.label}>Estado</Text>
           <View style={styles.statusRow}>

@@ -36,6 +36,31 @@ const STATUS_LABELS: Record<string, string> = {
   favorite: 'Favorito',
 };
 
+function toIsoDate(raw: string): string | null {
+  const t = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const m = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(t);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+}
+
+function toAmount(raw: string): string | null {
+  const t = raw.trim().replace(',', '.');
+  return /^\d+(\.\d+)?$/.test(t) ? t : null;
+}
+
+function rangeParams(f: { dateFrom: string; dateTo: string; amountMin: string; amountMax: string }) {
+  const p: Record<string, string> = {};
+  const from = toIsoDate(f.dateFrom);
+  if (from) p.date_from = from;
+  const to = toIsoDate(f.dateTo);
+  if (to) p.date_to = to;
+  const min = toAmount(f.amountMin);
+  if (min) p.amount_min = min;
+  const max = toAmount(f.amountMax);
+  if (max) p.amount_max = max;
+  return p;
+}
+
 const ORDER_OPTIONS = [
   { value: '', label: 'Recientes' },
   { value: '-total', label: 'Más caras' },
@@ -51,6 +76,11 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
   const [category, setCategory] = useState('');
   const [ordering, setOrdering] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [amountMin, setAmountMin] = useState('');
+  const [amountMax, setAmountMax] = useState('');
   const [summary, setSummary] = useState<{ count: number; total: number } | null>(null);
 
   const fetchDocuments = useCallback(async () => {
@@ -59,6 +89,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
       if (search.trim()) params.search = search.trim();
       if (category) params.category = category;
       if (ordering) params.ordering = ordering;
+      Object.assign(params, rangeParams({ dateFrom, dateTo, amountMin, amountMax }));
       const response = await api.get('/api/documents/', { params });
       const results = response.data.results ?? response.data;
       setDocuments(results);
@@ -67,7 +98,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
     } catch (error) {
       console.log('Error al cargar documentos', error);
     }
-  }, [search, category, ordering]);
+  }, [search, category, ordering, dateFrom, dateTo, amountMin, amountMax]);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -103,6 +134,7 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
     const params: Record<string, string> = {};
     if (search.trim()) params.search = search.trim();
     if (category) params.category = category;
+    Object.assign(params, rangeParams({ dateFrom, dateTo, amountMin, amountMax }));
     try {
       await exportDocuments(format, params);
     } catch (error) {
@@ -115,6 +147,8 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
     await logout();
     onLogout();
   };
+
+  const activeCount = [dateFrom, dateTo, amountMin, amountMax].filter((v) => v.trim()).length;
 
   if (loading) {
     return (
@@ -167,6 +201,62 @@ export default function DocumentsScreen({ onLogout, onAddPress, onSelect, refres
             </TouchableOpacity>
           ))}
         </ScrollView>
+        <TouchableOpacity onPress={() => setShowFilters((v) => !v)}>
+          <Text style={styles.filtersToggle}>
+            {showFilters ? 'Ocultar fechas e importe ▲' : 'Fechas e importe ▼'}
+            {activeCount > 0 ? ` (${activeCount} activos)` : ''}
+          </Text>
+        </TouchableOpacity>
+        {showFilters ? (
+          <View style={styles.rangePanel}>
+            <View style={styles.rangeRow}>
+              <TextInput
+                style={styles.rangeInput}
+                placeholder="Desde (AAAA-MM-DD)"
+                value={dateFrom}
+                onChangeText={setDateFrom}
+                keyboardType="numbers-and-punctuation"
+                autoCorrect={false}
+              />
+              <TextInput
+                style={styles.rangeInput}
+                placeholder="Hasta (AAAA-MM-DD)"
+                value={dateTo}
+                onChangeText={setDateTo}
+                keyboardType="numbers-and-punctuation"
+                autoCorrect={false}
+              />
+            </View>
+            <View style={styles.rangeRow}>
+              <TextInput
+                style={styles.rangeInput}
+                placeholder="Importe mínimo"
+                value={amountMin}
+                onChangeText={setAmountMin}
+                keyboardType="decimal-pad"
+              />
+              <TextInput
+                style={styles.rangeInput}
+                placeholder="Importe máximo"
+                value={amountMax}
+                onChangeText={setAmountMax}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            {activeCount > 0 ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setDateFrom('');
+                  setDateTo('');
+                  setAmountMin('');
+                  setAmountMax('');
+                }}
+              >
+                <Text style={styles.clearText}>Limpiar fechas e importe</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {summary ? (
@@ -333,6 +423,35 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#fff',
+  },
+  filtersToggle: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2c3e50',
+  },
+  rangePanel: {
+    marginTop: 8,
+  },
+  rangeRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  rangeInput: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#dfe6e9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    marginRight: 8,
+  },
+  clearText: {
+    fontSize: 13,
+    color: '#c0392b',
+    fontWeight: '600',
   },
   summary: {
     paddingHorizontal: 20,

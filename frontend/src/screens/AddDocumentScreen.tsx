@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { createDocument } from '../api/client';
+import CategoryPicker from '../components/CategoryPicker';
 
 type Props = {
   onSaved: () => void;
@@ -166,13 +167,7 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
           onChangeText={setPaymentMethod}
         />
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Categoría"
-        value={category}
-        onChangeText={setCategory}
-      />
-
+      <CategoryPicker value={category} onChange={setCategory} />
       <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
         {saving ? (
           <ActivityIndicator color="#fff" />
