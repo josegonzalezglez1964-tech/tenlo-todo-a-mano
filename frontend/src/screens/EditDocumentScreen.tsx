@@ -7,8 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Image,
+  Alert,
 } from 'react-native';
-import { api, updateDocument } from '../api/client';
+import { api, updateDocument, compressImage } from '../api/client';
+import * as ImagePicker from 'expo-image-picker';
 import CategoryPicker from '../components/CategoryPicker';
 
 const FIELDS = [
@@ -51,6 +54,8 @@ export default function EditDocumentScreen({
     category: '',
     status: 'pending',
   });
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [newImageUri, setNewImageUri] = useState<string | null>(null);
 
   const setField = (key: string, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -71,6 +76,7 @@ export default function EditDocumentScreen({
           category: d.category ?? '',
           status: d.status ?? 'pending',
         });
+        setCurrentFile(d.file ?? null);
       } catch (e) {
         setError('No se pudo cargar la factura.');
       }
@@ -78,11 +84,39 @@ export default function EditDocumentScreen({
     })();
   }, [id]);
 
+  const changePhoto = async () => {
+    Alert.alert('Cambiar foto', 'Elige cómo quieres añadirla', [
+      {
+        text: 'Hacer foto',
+        onPress: async () => {
+          const permission = await ImagePicker.requestCameraPermissionsAsync();
+          if (!permission.granted) return;
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.95 });
+          if (!result.canceled && result.assets?.length) {
+            setNewImageUri(await compressImage(result.assets[0].uri));
+          }
+        },
+      },
+      {
+        text: 'Elegir de la galería',
+        onPress: async () => {
+          const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!permission.granted) return;
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
+          if (!result.canceled && result.assets?.length) {
+            setNewImageUri(await compressImage(result.assets[0].uri));
+          }
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
-      await updateDocument(id, form as any);
+      await updateDocument(id, { ...(form as any), newImageUri });
       onSaved();
       return;
     } catch (e: any) {
@@ -108,6 +142,17 @@ export default function EditDocumentScreen({
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity style={styles.photoBox} onPress={changePhoto}>
+            {newImageUri || currentFile ? (
+              <Image source={{ uri: newImageUri || currentFile! }} style={styles.photoPreview} />
+            ) : (
+              <Text style={styles.photoBoxText}>Toca para añadir una foto</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.photoHint}>
+            {newImageUri ? 'Foto nueva (se guardará al pulsar Guardar cambios)' : 'Toca la foto para cambiarla'}
+          </Text>
+
           {FIELDS.map((f) =>
             f.key === 'category' ? (
               <CategoryPicker
@@ -170,6 +215,21 @@ const styles = StyleSheet.create({
   back: { fontSize: 16, color: '#2c3e50', width: 70 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#2c3e50' },
   content: { padding: 16, paddingBottom: 48 },
+  photoBox: {
+    height: 160,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderStyle: 'dashed',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  photoBoxText: { color: '#999' },
+  photoPreview: { width: '100%', height: '100%' },
+  photoHint: { color: '#7f8c8d', fontSize: 12, marginBottom: 16, textAlign: 'center' },
   field: { marginBottom: 14 },
   label: { color: '#7f8c8d', fontSize: 14, marginBottom: 6 },
   input: {

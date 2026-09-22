@@ -2,6 +2,7 @@ import axios from 'axios';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // En Termux + Expo Go en el mismo móvil, 127.0.0.1 apunta al propio dispositivo.
@@ -177,22 +178,56 @@ export type EditDocumentInput = {
   payment_method: string;
   category: string;
   status: string;
+  newImageUri?: string | null;
 };
 
 export async function updateDocument(id: number, input: EditDocumentInput) {
   const date = normalizeDate(input.date);
   const total = normalizeNumber(input.total);
   const taxes = normalizeNumber(input.taxes);
-  const response = await api.patch(`/api/documents/${id}/`, {
-    title: input.title.trim(),
-    merchant_name: input.merchant_name.trim(),
-    date: date || null,
-    total: total || null,
-    taxes: taxes || null,
-    currency: input.currency.trim(),
-    payment_method: input.payment_method.trim(),
-    category: input.category.trim(),
-    status: input.status,
+
+  if (!input.newImageUri) {
+    const response = await api.patch(`/api/documents/${id}/`, {
+      title: input.title.trim(),
+      merchant_name: input.merchant_name.trim(),
+      date: date || null,
+      total: total || null,
+      taxes: taxes || null,
+      currency: input.currency.trim(),
+      payment_method: input.payment_method.trim(),
+      category: input.category.trim(),
+      status: input.status,
+    });
+    return response.data;
+  }
+
+  const form = new FormData();
+  form.append('title', input.title.trim());
+  form.append('merchant_name', input.merchant_name.trim());
+  if (date) form.append('date', date);
+  if (total) form.append('total', total);
+  if (taxes) form.append('taxes', taxes);
+  form.append('currency', input.currency.trim());
+  form.append('payment_method', input.payment_method.trim());
+  form.append('category', input.category.trim());
+  form.append('status', input.status);
+
+  const filename = input.newImageUri.split('/').pop()?.split('?')[0] || 'foto.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const ext = match ? match[1].toLowerCase() : 'jpg';
+  const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(input.newImageUri);
+    const blob = await response.blob();
+    form.append('file', blob, filename);
+  } else {
+    // @ts-ignore React Native (iOS/Android) acepta este formato de objeto para archivos.
+    form.append('file', { uri: input.newImageUri, name: filename, type: mime });
+  }
+
+  const response = await api.patch(`/api/documents/${id}/`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;
 }
@@ -239,4 +274,20 @@ export async function exportDocuments(
     { headers: { Authorization: `Bearer ${token}` }, idempotent: true }
   );
   await Sharing.shareAsync(file.uri, { mimeType: mime, dialogTitle: 'Exportar facturas' });
+}
+
+// Redimensiona a 1600px de lado largo y comprime a calidad 0.6, para no gastar
+// mucho espacio guardando fotos de facturas.
+export async function compressImage(uri: string): Promise<string> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1600 } }],
+      { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  } catch (error) {
+    console.log('No se pudo comprimir la imagen, se usa la original', error);
+    return uri;
+  }
 }

@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { createDocument } from '../api/client';
+import { createDocument, compressImage } from '../api/client';
 import CategoryPicker from '../components/CategoryPicker';
 
 type Props = {
@@ -42,7 +42,7 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
       quality: 0.7,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
+      setImageUri(await compressImage(result.assets[0].uri));
     }
   };
 
@@ -57,7 +57,7 @@ export default function AddDocumentScreen({ onSaved, onCancel }: Props) {
       quality: 0.95,
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
+      setImageUri(await compressImage(result.assets[0].uri));
     }
   };
 
